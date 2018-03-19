@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="mysql 优化," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="这篇文章几乎涵盖了SQL优化的所有方面 大原则：少取字段，建立合理的索引 建表原则1、定长和变长相分离定长表查询速度快，变长表查的慢，可以考虑将变长字段专门放在一个表里用主键关联 2、常用字段和不常用字段分离3、添加冗余字段，用空间换时间4、字段类型选择：整型&amp;gt;data,time&amp;gt;enum char&amp;gt;varchar&amp;gt;blob text&amp;gt;&amp;gt;time类型的优先用时间">
+<meta name="keywords" content="mysql 优化">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL优化策略以及方法">
+<meta property="og:url" content="http://yoursite.com/2018/03/15/SQLoptimization/index.html">
+<meta property="og:site_name" content="你祺哥的blog">
+<meta property="og:description" content="这篇文章几乎涵盖了SQL优化的所有方面 大原则：少取字段，建立合理的索引 建表原则1、定长和变长相分离定长表查询速度快，变长表查的慢，可以考虑将变长字段专门放在一个表里用主键关联 2、常用字段和不常用字段分离3、添加冗余字段，用空间换时间4、字段类型选择：整型&amp;gt;data,time&amp;gt;enum char&amp;gt;varchar&amp;gt;blob text&amp;gt;&amp;gt;time类型的优先用时间">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-03-15T08:13:50.643Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MySQL优化策略以及方法">
+<meta name="twitter:description" content="这篇文章几乎涵盖了SQL优化的所有方面 大原则：少取字段，建立合理的索引 建表原则1、定长和变长相分离定长表查询速度快，变长表查的慢，可以考虑将变长字段专门放在一个表里用主键关联 2、常用字段和不常用字段分离3、添加冗余字段，用空间换时间4、字段类型选择：整型&amp;gt;data,time&amp;gt;enum char&amp;gt;varchar&amp;gt;blob text&amp;gt;&amp;gt;time类型的优先用时间">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/03/15/SQLoptimization/"/>
+
+
+
+
+
+  <title>MySQL优化策略以及方法 | 你祺哥的blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">你祺哥的blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/15/SQLoptimization/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="xuqimm">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="你祺哥的blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MySQL优化策略以及方法</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-03-15T11:49:05+08:00">
+                2018-03-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>这篇文章几乎涵盖了SQL优化的所有方面</p>
+<h3 id="大原则：少取字段，建立合理的索引"><a href="#大原则：少取字段，建立合理的索引" class="headerlink" title="大原则：少取字段，建立合理的索引"></a>大原则：少取字段，建立合理的索引</h3><hr>
+<h2 id="建表原则"><a href="#建表原则" class="headerlink" title="建表原则"></a>建表原则</h2><h3 id="1、定长和变长相分离"><a href="#1、定长和变长相分离" class="headerlink" title="1、定长和变长相分离"></a>1、定长和变长相分离</h3><p>定长表查询速度快，变长表查的慢，可以考虑将变长字段专门放在一个表里用主键关联</p>
+<h3 id="2、常用字段和不常用字段分离"><a href="#2、常用字段和不常用字段分离" class="headerlink" title="2、常用字段和不常用字段分离"></a>2、常用字段和不常用字段分离</h3><h3 id="3、添加冗余字段，用空间换时间"><a href="#3、添加冗余字段，用空间换时间" class="headerlink" title="3、添加冗余字段，用空间换时间"></a>3、添加冗余字段，用空间换时间</h3><h3 id="4、字段类型选择："><a href="#4、字段类型选择：" class="headerlink" title="4、字段类型选择："></a>4、字段类型选择：</h3><p>整型&gt;data,time&gt;enum char&gt;varchar&gt;blob text&gt;&gt;<br>time类型的优先用时间戳</p>
+<h3 id="5、数据长度选择："><a href="#5、数据长度选择：" class="headerlink" title="5、数据长度选择："></a>5、数据长度选择：</h3><p>够用就行，不要慷慨</p>
+<h3 id="6、列的选择尽量少用null"><a href="#6、列的选择尽量少用null" class="headerlink" title="6、列的选择尽量少用null"></a>6、列的选择尽量少用null</h3><hr>
+<h2 id="建立索引"><a href="#建立索引" class="headerlink" title="建立索引"></a>建立索引</h2><h3 id="1、索引："><a href="#1、索引：" class="headerlink" title="1、索引："></a>1、索引：</h3><p>一种高效查询的数据结构，提高查询，排序，分组的速度</p>
+<h3 id="2、btree索引："><a href="#2、btree索引：" class="headerlink" title="2、btree索引："></a>2、btree索引：</h3><p>用的是树索引,非常高效</p>
+<h3 id="3、hash索引："><a href="#3、hash索引：" class="headerlink" title="3、hash索引："></a>3、hash索引：</h3><p>只能用于memory表，哈希表好处，快，数据位于磁盘的位置是算出来的。<br>缺点：磁盘上有空洞，数据不连续，无法对范围查询做优化，无法用前缀索引，无法对排序进行优化</p>
+<h3 id="4、优化离不开实践调研"><a href="#4、优化离不开实践调研" class="headerlink" title="4、优化离不开实践调研"></a>4、优化离不开实践调研</h3><h3 id="5、聚簇索引和非聚簇索引"><a href="#5、聚簇索引和非聚簇索引" class="headerlink" title="5、聚簇索引和非聚簇索引"></a>5、聚簇索引和非聚簇索引</h3><p>InnoDB引擎是聚簇索引，数据都存在（主键节点）树节点下。InnoDB节点指向一个对主键的索引。<br>MyISAM是非聚簇索引，节点只记录数据在硬盘的位置,找到节点后需要回行</p>
+<h3 id="6、聚簇索引的页分裂"><a href="#6、聚簇索引的页分裂" class="headerlink" title="6、聚簇索引的页分裂"></a>6、聚簇索引的页分裂</h3><p>当主键不规律，单个数据特别大的时候，会出现页分裂。即使乱序插入，查询的时候也是正序的。</p>
+<h3 id="7索引覆盖"><a href="#7索引覆盖" class="headerlink" title="7索引覆盖"></a>7索引覆盖</h3><p>在查询的时候，查询到了位于索引的数据，不用回行</p>
+<h3 id="8、设置理想的索引"><a href="#8、设置理想的索引" class="headerlink" title="8、设置理想的索引"></a>8、设置理想的索引</h3><p>查询频繁，区分度高，长度小，尽可能覆盖常用查询字段<br>1、对于左前缀易于区分的列，可以设置此列的前几个字符作为索引，<br>2、对于左前缀易于区分的列，有两个办法：<br>    1）字段倒序<br>    2）伪哈希技巧，用crc32/md5等算法把字符串算成32位整数，存一个字段，建立这个字段的索引</p>
+<h3 id="9、多列查询考虑列的顺序"><a href="#9、多列查询考虑列的顺序" class="headerlink" title="9、多列查询考虑列的顺序"></a>9、多列查询考虑列的顺序</h3><p>一定结合实际情况，优化前多看日志，总结用户查询习惯</p>
+<h3 id="10、冗余索引"><a href="#10、冗余索引" class="headerlink" title="10、冗余索引"></a>10、冗余索引</h3><p>看情况使用，用一个字段查另一个字段，可以建这两个字段的联合索引，最终用到索引覆盖，索引覆盖不需要回行所以速度快</p>
+<h3 id="11、索引碎片与维护"><a href="#11、索引碎片与维护" class="headerlink" title="11、索引碎片与维护"></a>11、索引碎片与维护</h3><p>使用久了，文件，数据和索引都会产生碎片，用以下语句来优化</p>
+<pre><code>optimize 表名；
+</code></pre><p>PS：OPTIMIZE TABLE只对MyISAM, BDB和InnoDB表起作用。</p>
+<hr>
+<h2 id="SQL语句优化"><a href="#SQL语句优化" class="headerlink" title="SQL语句优化"></a>SQL语句优化</h2><h3 id="查询大原则：能不取用业务逻辑算就算，能少取就少取。"><a href="#查询大原则：能不取用业务逻辑算就算，能少取就少取。" class="headerlink" title="查询大原则：能不取用业务逻辑算就算，能少取就少取。"></a>查询大原则：能不取用业务逻辑算就算，能少取就少取。</h3><h3 id="1、少用多表联查"><a href="#1、少用多表联查" class="headerlink" title="1、少用多表联查"></a>1、少用多表联查</h3><p>尽量避免两表以上的多表联查，否则就说明表结构设计不合理，或者就是没有必要的炫技</p>
+<h3 id="2、用explain来定量分析索引的效率"><a href="#2、用explain来定量分析索引的效率" class="headerlink" title="2、用explain来定量分析索引的效率"></a>2、用explain来定量分析索引的效率</h3><p>详细教程：<a href="http://blog.csdn.net/solmyr_biti/article/details/54293492" target="_blank" rel="noopener">http://blog.csdn.net/solmyr_biti/article/details/54293492</a><br>type类型：all扫描所有数据，index扫描所有节点，range查询部分节点以排序，ref引用，er_ref定位到一行，更快，const，system，null这三个优化到常量，很快了。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mysql-优化/" rel="tag"># mysql 优化</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/03/16/考研一年回顾/" rel="prev" title="考研一年回顾">
+                考研一年回顾 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="xuqimm" />
+            
+              <p class="site-author-name" itemprop="name">xuqimm</p>
+              <p class="site-description motion-element" itemprop="description">办法总比困难多</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/learninginb" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:xuqi1017@outlook.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#大原则：少取字段，建立合理的索引"><span class="nav-number">1.</span> <span class="nav-text">大原则：少取字段，建立合理的索引</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#建表原则"><span class="nav-number"></span> <span class="nav-text">建表原则</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、定长和变长相分离"><span class="nav-number">1.</span> <span class="nav-text">1、定长和变长相分离</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、常用字段和不常用字段分离"><span class="nav-number">2.</span> <span class="nav-text">2、常用字段和不常用字段分离</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3、添加冗余字段，用空间换时间"><span class="nav-number">3.</span> <span class="nav-text">3、添加冗余字段，用空间换时间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4、字段类型选择："><span class="nav-number">4.</span> <span class="nav-text">4、字段类型选择：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5、数据长度选择："><span class="nav-number">5.</span> <span class="nav-text">5、数据长度选择：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6、列的选择尽量少用null"><span class="nav-number">6.</span> <span class="nav-text">6、列的选择尽量少用null</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#建立索引"><span class="nav-number"></span> <span class="nav-text">建立索引</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、索引："><span class="nav-number">1.</span> <span class="nav-text">1、索引：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、btree索引："><span class="nav-number">2.</span> <span class="nav-text">2、btree索引：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3、hash索引："><span class="nav-number">3.</span> <span class="nav-text">3、hash索引：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4、优化离不开实践调研"><span class="nav-number">4.</span> <span class="nav-text">4、优化离不开实践调研</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5、聚簇索引和非聚簇索引"><span class="nav-number">5.</span> <span class="nav-text">5、聚簇索引和非聚簇索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6、聚簇索引的页分裂"><span class="nav-number">6.</span> <span class="nav-text">6、聚簇索引的页分裂</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7索引覆盖"><span class="nav-number">7.</span> <span class="nav-text">7索引覆盖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8、设置理想的索引"><span class="nav-number">8.</span> <span class="nav-text">8、设置理想的索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9、多列查询考虑列的顺序"><span class="nav-number">9.</span> <span class="nav-text">9、多列查询考虑列的顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10、冗余索引"><span class="nav-number">10.</span> <span class="nav-text">10、冗余索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#11、索引碎片与维护"><span class="nav-number">11.</span> <span class="nav-text">11、索引碎片与维护</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SQL语句优化"><span class="nav-number"></span> <span class="nav-text">SQL语句优化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#查询大原则：能不取用业务逻辑算就算，能少取就少取。"><span class="nav-number">1.</span> <span class="nav-text">查询大原则：能不取用业务逻辑算就算，能少取就少取。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1、少用多表联查"><span class="nav-number">2.</span> <span class="nav-text">1、少用多表联查</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、用explain来定量分析索引的效率"><span class="nav-number">3.</span> <span class="nav-text">2、用explain来定量分析索引的效率</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XuQi</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
